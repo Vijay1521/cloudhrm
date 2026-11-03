@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>CloudHRM Terminal</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1e2329;--muted:#5b6573;--line:#d5dae1;--brand:#1f3a5f;--accent:#0f8b8d;--accent-ink:#fff;--warn:#b4441c;--warn-bg:#fdf1ec;--ok-bg:#eaf6f5;--field:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#12161b;--card:#1b2128;--ink:#e6e9ed;--muted:#9aa4b1;--line:#2e3742;--brand:#14263d;--accent:#2bb3b5;--accent-ink:#06191a;--warn:#ff8a65;--warn-bg:#3a2119;--ok-bg:#143233;--field:#141a20}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--brand);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px}
+header h1{font-size:17px;margin:0;font-weight:650}
+header .sub{font-size:12px;opacity:.75;margin-left:auto;text-align:right}
+nav{display:flex;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2}
+nav button{flex:1;padding:12px 4px;border:0;background:none;color:var(--muted);font:inherit;font-weight:600;border-bottom:3px solid transparent;cursor:pointer}
+nav button.on{color:var(--accent);border-bottom-color:var(--accent)}
+main{max-width:720px;margin:0 auto;padding:14px 16px 40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.kv{background:var(--bg);border-radius:8px;padding:9px 10px;min-width:0}
+.kv .k{font-size:12px;color:var(--muted)}
+.kv .v{font-weight:650;overflow-wrap:anywhere}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+input,select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--ink);font:inherit}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{flex:1}
+.fields{display:grid;grid-template-columns:1fr;gap:0 12px}
+@media (min-width:640px){.fields.three{grid-template-columns:1fr 1fr 1fr}.fields.two{grid-template-columns:1fr 1fr}}
+button.btn{padding:11px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:650;cursor:pointer;min-height:44px}
+button.btn.ghost{background:none;color:var(--accent)}
+button.btn.danger{background:none;border-color:var(--warn);color:var(--warn)}
+button.btn:disabled{opacity:.55;cursor:default}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.nets{list-style:none;margin:0;padding:0;max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.nets li{display:flex;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+.nets li:last-child{border-bottom:0}
+.nets li.sel{background:var(--ok-bg)}
+.nets .name{flex:1;min-width:0;overflow-wrap:anywhere}
+.nets .meta{font-size:12px;color:var(--muted);white-space:nowrap}
+.bars{display:inline-flex;align-items:flex-end;gap:2px;height:14px}
+.bars i{width:4px;background:var(--line);border-radius:1px}
+.bars i.on{background:var(--accent)}
+.note{font-size:13px;color:var(--muted)}
+.msg{padding:10px 12px;border-radius:8px;margin-top:12px;font-size:14px;display:none}
+.msg.show{display:block}
+.msg.ok{background:var(--ok-bg)}
+.msg.err{background:var(--warn-bg);color:var(--warn)}
+.pwrap{position:relative}
+.pwrap input{padding-right:64px}
+.pwrap button{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;padding:6px}
+details summary{cursor:pointer;color:var(--accent);font-weight:600;margin-top:14px}
+pre{background:var(--bg);border-radius:8px;padding:10px;max-height:360px;overflow:auto;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+progress{width:100%;height:12px;margin-top:10px}
+.check{display:flex;align-items:center;gap:10px;margin-top:12px}
+.check input{width:auto;transform:scale(1.25)}
+.hidden{display:none!important}
+#auth{max-width:420px;margin:40px auto;padding:0 16px}
+svg{display:block}
+</style>
+</head>
+<body>
+<header><h1>CloudHRM Terminal</h1><div class="sub" id="hdr"></div></header>
+
+<section id="auth" class="hidden">
+  <div class="card">
+    <h2 id="authTitle">Sign in</h2>
+    <p class="note" id="authNote"></p>
+    <form id="authForm">
+      <label for="authPw">Admin password</label>
+      <div class="pwrap"><input id="authPw" type="password" autocomplete="current-password" minlength="8" maxlength="64" required><button type="button" data-toggle="authPw">Show</button></div>
+      <div id="authPw2Wrap" class="hidden">
+        <label for="authPw2">Repeat password</label>
+        <input id="authPw2" type="password" autocomplete="new-password" minlength="8" maxlength="64">
+      </div>
+      <div class="actions"><button class="btn" id="authBtn" type="submit">Sign in</button></div>
+      <div class="msg" id="authMsg"></div>
+    </form>
+  </div>
+</section>
+
+<div id="app" class="hidden">
+<nav>
+  <button data-tab="status" class="on">Status</button>
+  <button data-tab="wifi">WiFi</button>
+  <button data-tab="device">Device</button>
+  <button data-tab="tools">Tools</button>
+</nav>
+<main>
+
+<!-- STATUS -->
+<section id="tab-status">
+  <div class="card"><h2>Device</h2><div class="grid" id="stDevice"></div></div>
+  <div class="card"><h2>Connection</h2><div class="grid" id="stNet"></div>
+    <label>Signal, last 10 minutes (dBm)</label><div id="stChart"></div>
+  </div>
+  <div class="card"><h2>Recent punches</h2><div id="stPunches" class="note">None yet.</div></div>
+  <div class="card"><h2>System</h2><div class="grid" id="stSys"></div></div>
+</section>
+
+<!-- WIFI -->
+<section id="tab-wifi" class="hidden">
+  <div class="card">
+    <div class="row"><h2 style="margin:0">Nearby networks (2.4 GHz)</h2><button class="btn ghost" id="scanBtn" style="flex:0 0 auto">Scan</button></div>
+    <p class="note">Tap a network to put its name in the SSID field. Pick the one with the most bars where the terminal is mounted.</p>
+    <ul class="nets" id="nets"><li class="note">Press Scan to list networks.</li></ul>
+  </div>
+  <form class="card" id="wifiForm">
+    <h2>WiFi and device</h2>
+    <div class="fields three">
+      <div>
+        <label for="wSsid">SSID (network name)</label>
+        <input id="wSsid" maxlength="32" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+      </div>
+      <div>
+        <label for="wPass">Password</label>
+        <div class="pwrap"><input id="wPass" type="password" maxlength="63" autocomplete="off"><button type="button" data-toggle="wPass">Show</button></div>
+      </div>
+      <div>
+        <label for="wDev">Device ID</label>
+        <input id="wDev" maxlength="64" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+      </div>
+    </div>
+    <p class="note">Leave the password empty only for an open network. The device ID is the one issued by CloudHRM for this terminal.</p>
+    <details id="adv">
+      <summary>Advanced: static IP</summary>
+      <div class="check"><input type="checkbox" id="sEn"><label for="sEn" style="margin:0">Use a static IP (skips DHCP on weak links)</label></div>
+      <div class="fields two">
+        <div><label for="sIp">IP address</label><input id="sIp" inputmode="decimal" placeholder="192.168.1.50"></div>
+        <div><label for="sGw">Gateway</label><input id="sGw" inputmode="decimal" placeholder="192.168.1.1"></div>
+        <div><label for="sMask">Subnet mask</label><input id="sMask" inputmode="decimal" placeholder="255.255.255.0"></div>
+        <div><label for="sDns">DNS (optional)</label><input id="sDns" inputmode="decimal" placeholder="same as gateway"></div>
+      </div>
+    </details>
+    <div class="actions"><button class="btn" id="wifiBtn" type="submit">Test &amp; save</button></div>
+    <div class="msg" id="wifiMsg"></div>
+  </form>
+</section>
+
+<!-- DEVICE -->
+<section id="tab-device" class="hidden">
+  <form class="card" id="devForm">
+    <h2>Device settings</h2>
+    <div class="fields two">
+      <div><label for="dId">Device ID</label><input id="dId" maxlength="64" autocomplete="off" spellcheck="false" required></div>
+      <div><label for="dTz">Timezone</label><select id="dTz"></select></div>
+      <div><label for="dRf">Relay pulse for card (ms)</label><input id="dRf" type="number" min="50" max="10000" step="50"></div>
+      <div><label for="dFp">Relay pulse for fingerprint (ms)</label><input id="dFp" type="number" min="50" max="10000" step="50"></div>
+    </div>
+    <p class="note">The server can also change the timezone remotely (RTC_update).</p>
+    <h2 style="margin-top:18px">Radio</h2>
+    <div class="fields two">
+      <div><label for="dPhy">WiFi mode</label><select id="dPhy">
+        <option value="0">Auto (long-range 802.11b first)</option><option value="1">802.11b only (longest range)</option>
+        <option value="2">802.11g</option><option value="3">802.11n</option></select></div>
+      <div><label for="dTx">Transmit power (dBm, max 20.5)</label><input id="dTx" type="number" min="0" max="20.5" step="0.25"></div>
+    </div>
+    <h2 style="margin-top:18px">Access</h2>
+    <div class="check"><input type="checkbox" id="dLan"><label for="dLan" style="margin:0">Allow this page on the office network (otherwise hotspot only)</label></div>
+    <div class="check"><input type="checkbox" id="dOta"><label for="dOta" style="margin:0">Allow ArduinoOTA uploads from the office network</label></div>
+    <div class="check"><input type="checkbox" id="dAuto"><label for="dAuto" style="margin:0">Install new GitHub releases automatically at night (02:00-04:00, only when idle)</label></div>
+    <div class="actions"><button class="btn" type="submit">Save</button></div>
+    <div class="msg" id="devMsg"></div>
+  </form>
+</section>
+
+<!-- TOOLS -->
+<section id="tab-tools" class="hidden">
+  <div class="card">
+    <h2>Updates from GitHub</h2>
+    <div class="grid" id="ghInfo"></div>
+    <div class="actions"><button class="btn ghost" id="ghCheck">Check for updates</button><button class="btn hidden" id="ghInstall">Install update</button></div>
+    <div class="msg" id="ghMsg"></div>
+  </div>
+  <div class="card">
+    <h2>Firmware update from file</h2>
+    <p class="note" id="fwNote"></p>
+    <input type="file" id="fwFile" accept=".bin,application/octet-stream">
+    <progress id="fwProg" max="100" value="0" class="hidden"></progress>
+    <div class="actions"><button class="btn" id="fwBtn">Upload &amp; install</button></div>
+    <div class="msg" id="fwMsg"></div>
+  </div>
+  <div class="card">
+    <h2>Diagnostics</h2>
+    <div class="grid" id="diag"></div>
+    <div class="actions"><button class="btn ghost" id="pingBtn">Test server reachability</button><button class="btn ghost" id="logBtn">Show log</button><button class="btn ghost" id="logDl">Download log</button></div>
+    <div class="msg" id="diagMsg"></div>
+    <pre id="logBox" class="hidden"></pre>
+  </div>
+  <form class="card" id="pwForm">
+    <h2>Security</h2>
+    <div class="fields two">
+      <div><label for="pCur">Current admin password</label><input id="pCur" type="password" autocomplete="current-password" required></div>
+      <div><label for="pNew">New admin password</label><input id="pNew" type="password" autocomplete="new-password" minlength="8" maxlength="64" required></div>
+    </div>
+    <div class="actions"><button class="btn" type="submit">Change password</button><button class="btn ghost" type="button" id="apBtn">New hotspot password</button><button class="btn ghost" type="button" id="logoutBtn">Sign out</button></div>
+    <div class="msg" id="pwMsg"></div>
+  </form>
+  <div class="card">
+    <h2>Maintenance</h2>
+    <p class="note">Reset WiFi keeps the device ID and timezone. Factory reset erases everything, including the admin password.</p>
+    <div class="actions"><button class="btn ghost" id="rebootBtn">Reboot</button><button class="btn danger" id="wifiResetBtn">Reset WiFi</button><button class="btn danger" id="factoryBtn">Factory reset</button></div>
+    <div class="msg" id="mntMsg"></div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+let token = sessionStorage.getItem("chrm") || "";
+let statusTimer = 0, info = {};
+
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in attrs || {}) { if (k === "class") e.className = attrs[k]; else e.setAttribute(k, attrs[k]); }
+  for (const c of kids) e.append(c instanceof Node ? c : document.createTextNode(c == null ? "" : String(c)));
+  return e;
+}
+function msg(id, text, ok) { const m = $(id); m.textContent = text; m.className = "msg show " + (ok ? "ok" : "err"); }
+function clearMsg(id) { $(id).className = "msg"; }
+
+async function api(path, body, method) {
+  const opt = { method: method || (body === undefined ? "GET" : "POST"), headers: {} };
+  if (token) opt.headers.Authorization = "Bearer " + token;
+  if (body !== undefined) { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
+  const r = await fetch(path, opt);
+  if (r.status === 401 && path !== "/api/login" && path !== "/api/password") { showAuth(); throw new Error("Please sign in again"); }
+  const type = r.headers.get("Content-Type") || "";
+  const data = type.includes("json") ? await r.json().catch(() => ({})) : await r.text();
+  if (!r.ok) throw new Error((data && data.error) || ("HTTP " + r.status));
+  return data;
+}
+
+function bars(rssi) {
+  const n = !rssi ? 0 : rssi >= -60 ? 4 : rssi >= -70 ? 3 : rssi >= -80 ? 2 : rssi >= -88 ? 1 : 0;
+  const b = el("span", { class: "bars", title: rssi + " dBm" });
+  for (let i = 0; i < 4; i++) { const s = el("i", n > i ? { class: "on" } : {}); s.style.height = (4 + i * 3) + "px"; b.append(s); }
+  return b;
+}
+function kv(k, v) { return el("div", { class: "kv" }, el("div", { class: "k" }, k), el("div", { class: "v" }, v)); }
+function fill(id, pairs) { const g = $(id); g.replaceChildren(...pairs.map(p => kv(p[0], p[1]))); }
+function dur(s) { const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60); return (d ? d + "d " : "") + h + "h " + m + "m"; }
+function kb(b) { return Math.round(b / 1024) + " KB"; }
+
+// ---- auth ---------------------------------------------------------------
+function showAuth() {
+  clearInterval(statusTimer);
+  token = ""; sessionStorage.removeItem("chrm");
+  $("app").classList.add("hidden"); $("auth").classList.remove("hidden");
+  const setup = !info.claimed;
+  $("authTitle").textContent = setup ? "Set up this terminal" : "Sign in";
+  $("authBtn").textContent = setup ? "Set password" : "Sign in";
+  $("authPw2Wrap").classList.toggle("hidden", !setup);
+  $("authPw").autocomplete = setup ? "new-password" : "current-password";
+  $("authNote").textContent = setup
+    ? (info.viaHotspot ? "Choose an admin password (8 to 64 characters). You will need it to change settings later." : "This terminal is not set up yet. Connect to its hotspot (press reset twice) to set the admin password.")
+    : "Enter the admin password for " + (info.name || "this terminal") + ".";
+  $("authForm").classList.toggle("hidden", setup && !info.viaHotspot);
+}
+$("authForm").onsubmit = async e => {
+  e.preventDefault(); clearMsg("authMsg");
+  const pw = $("authPw").value, setup = !info.claimed;
+  if (setup && pw !== $("authPw2").value) return msg("authMsg", "The passwords do not match.");
+  $("authBtn").disabled = true;
+  try {
+    const r = await api(setup ? "/api/setup" : "/api/login", { password: pw });
+    token = r.token; sessionStorage.setItem("chrm", token); info.claimed = true;
+    $("authPw").value = $("authPw2").value = "";
+    start();
+  } catch (err) { msg("authMsg", err.message); }
+  $("authBtn").disabled = false;
+};
+
+// ---- tabs ---------------------------------------------------------------
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+function showTab(t) {
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  document.querySelectorAll("main > section").forEach(s => s.classList.toggle("hidden", s.id !== "tab-" + t));
+  if (t === "wifi" || t === "device") loadDevice();
+  if (t === "tools") ghRefresh();
+}
+document.querySelectorAll("[data-toggle]").forEach(b => b.onclick = () => {
+  const i = $(b.dataset.toggle); i.type = i.type === "password" ? "text" : "password"; b.textContent = i.type === "password" ? "Show" : "Hide";
+});
+
+// ---- status -------------------------------------------------------------
+let lastStatus = {};
+async function refreshStatus() {
+  let s;
+  try { s = await api("/api/status"); } catch (e) { return; }
+  lastStatus = s;
+  $("hdr").textContent = (s.deviceId || "No device ID") + " · v" + s.fw;
+  fill("stDevice", [["Device ID", s.deviceId || "Not set"], ["Firmware", s.fw], ["Chip ID", s.chipId], ["Time", s.timeSynced ? s.time : "Not synced"], ["Timezone", tzLabel(s.tzOffsetSec)], ["Uptime", dur(s.uptime)]]);
+  const sig = el("span", {}, bars(s.rssi), " " + (s.rssi ? s.rssi + " dBm" : "-"));
+  fill("stNet", [["WiFi", s.ssid || "-"], ["Signal", sig], ["State", s.netState + (s.netError ? " (" + s.netError + ")" : "")], ["IP address", s.ip || "-"], ["MAC", s.mac], ["Mode", s.phy + " · ch " + (s.channel || "-")],
+    ["Server", s.api.lastHttp ? ("HTTP " + s.api.lastHttp + " · " + s.api.lastMs + " ms") : "No request yet"], ["MQTT", s.mqtt ? "Connected" : "Disconnected"]]);
+  chart(s.rssiHistory || []);
+  const p = $("stPunches");
+  if (s.punches && s.punches.length) {
+    p.replaceChildren(...s.punches.map(x => el("div", { class: "kv", style: "margin-bottom:6px" },
+      el("div", { class: "k" }, x.ago + " s ago · " + (x.type === "B" ? "Fingerprint" : "Card")),
+      el("div", { class: "v" }, x.id + " · " + (x.http === 200 || x.http === 201 ? "Recorded" : x.http > 0 ? "Rejected (HTTP " + x.http + ")" : "Network problem")))));
+  } else p.textContent = "None yet.";
+  fill("stSys", [["Free memory", kb(s.heap) + " (" + s.heapFrag + "% fragmented)"], ["Last reset", s.resetReason], ["Flash chip", kb(s.flashSize)], ["Firmware size", kb(s.sketchSize)], ["Space for OTA", kb(s.freeSketch) + (s.freeSketch > s.sketchSize ? " · OK" : " · too small")], ["Storage", s.storageOk ? "OK" : "Error"]]);
+  fill("diag", [["Fingerprint sensor", s.fp.present ? (s.fp.templates + " / " + s.fp.capacity + " stored") : "Not detected"], ["RFID reader", s.rfidVersion ? "RC522 v0x" + s.rfidVersion.toString(16) : "Not detected"], ["Pending jobs", s.jobs], ["Busy", s.busy ? "Enrolling" : "No"]]);
+  $("fwNote").textContent = "Running v" + s.fw + ", " + kb(s.sketchSize) + ". Up to " + kb(s.freeSketch) + " can be uploaded. Use a signed file: CloudHRM_v2.bin from a GitHub release, or CloudHRM_v2.ino.bin.signed from your own build. Unsigned files are rejected.";
+}
+function chart(h) {
+  const box = $("stChart");
+  if (!h.length) { box.textContent = "Collecting..."; box.className = "note"; return; }
+  box.className = "";
+  const W = 300, H = 70, ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg"); svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("width", "100%"); svg.setAttribute("height", H);
+  const y = v => H - 6 - ((Math.max(-95, Math.min(-30, v || -95)) + 95) / 65) * (H - 12);
+  const x = i => h.length === 1 ? W / 2 : 6 + i * (W - 12) / (h.length - 1);
+  [-60, -70, -80].forEach(g => { const l = document.createElementNS(ns, "line"); l.setAttribute("x1", 0); l.setAttribute("x2", W); l.setAttribute("y1", y(g)); l.setAttribute("y2", y(g)); l.setAttribute("stroke", "currentColor"); l.setAttribute("opacity", ".15"); svg.append(l); });
+  const pl = document.createElementNS(ns, "polyline"); pl.setAttribute("fill", "none"); pl.setAttribute("stroke", "var(--accent)"); pl.setAttribute("stroke-width", "2.5");
+  pl.setAttribute("points", h.map((v, i) => x(i) + "," + y(v)).join(" ")); svg.append(pl);
+  box.replaceChildren(svg);
+}
+
+// ---- timezone -----------------------------------------------------------
+const TZ = [[19800, "India (UTC+05:30)"], [20700, "Nepal (UTC+05:45)"], [21600, "Bangladesh (UTC+06:00)"], [18000, "Pakistan (UTC+05:00)"], [14400, "UAE (UTC+04:00)"], [10800, "Saudi Arabia (UTC+03:00)"], [28800, "Singapore (UTC+08:00)"], [0, "UTC"], [3600, "UTC+01:00"], [-18000, "UTC-05:00"]];
+function tzLabel(s) { const f = TZ.find(t => t[0] === s); if (f) return f[1]; const a = Math.abs(s); return "UTC" + (s < 0 ? "-" : "+") + String(Math.floor(a / 3600)).padStart(2, "0") + ":" + String(a % 3600 / 60).padStart(2, "0"); }
+function tzSelect(cur) {
+  const s = $("dTz"); const list = TZ.slice(); if (!list.find(t => t[0] === cur)) list.unshift([cur, tzLabel(cur)]);
+  s.replaceChildren(...list.map(t => { const o = el("option", { value: t[0] }, t[1]); if (t[0] === cur) o.selected = true; return o; }));
+}
+
+// ---- WiFi ---------------------------------------------------------------
+async function loadDevice() {
+  try {
+    const d = await api("/api/device");
+    if (!$("wSsid").value) $("wSsid").value = d.ssid || "";
+    if (!$("wDev").value) $("wDev").value = d.deviceId || "";
+    $("sEn").checked = d.staticIp.enabled;
+    if (d.staticIp.enabled) { $("sIp").value = d.staticIp.ip; $("sGw").value = d.staticIp.gateway; $("sMask").value = d.staticIp.subnet; $("sDns").value = d.staticIp.dns; }
+    $("dId").value = d.deviceId; tzSelect(d.tzOffsetSec); $("dRf").value = d.relayRfidMs; $("dFp").value = d.relayFpMs;
+    $("dPhy").value = d.phyMode; $("dTx").value = d.txPowerDbm; $("dLan").checked = d.lanPortal; $("dOta").checked = d.arduinoOta; $("dAuto").checked = d.autoUpdate;
+  } catch (e) {}
+}
+$("scanBtn").onclick = async () => {
+  const b = $("scanBtn"); b.disabled = true; b.textContent = "Scanning...";
+  try {
+    await api("/api/scan", {});
+    for (let i = 0; i < 20; i++) {
+      await new Promise(r => setTimeout(r, 1200));
+      const r = await api("/api/scan");
+      if (!r.scanning) { showNets(r.networks); break; }
+    }
+  } catch (e) { $("nets").replaceChildren(el("li", { class: "note" }, "Scan failed: " + e.message)); }
+  b.disabled = false; b.textContent = "Scan";
+};
+function showNets(list) {
+  const ul = $("nets");
+  if (!list.length) return ul.replaceChildren(el("li", { class: "note" }, "No networks found. 5 GHz networks are not supported."));
+  list.sort((a, b) => b.rssi - a.rssi);
+  ul.replaceChildren(...list.map(n => {
+    const li = el("li", {}, el("span", { class: "name" }, n.ssid), el("span", { class: "meta" }, (n.secure ? "Secured" : "Open") + " · ch " + n.ch + " · " + n.rssi + " dBm"), bars(n.rssi));
+    li.onclick = () => { ul.querySelectorAll("li").forEach(x => x.classList.remove("sel")); li.classList.add("sel"); $("wSsid").value = n.ssid; $("wPass").value = ""; $("wPass").focus(); };
+    return li;
+  }));
+}
+$("wifiForm").onsubmit = async e => {
+  e.preventDefault(); clearMsg("wifiMsg");
+  const pass = $("wPass").value;
+  if (pass && pass.length < 8) return msg("wifiMsg", "WiFi passwords are at least 8 characters.");
+  const body = { ssid: $("wSsid").value, password: pass, deviceId: $("wDev").value.trim(),
+    staticIp: { enabled: $("sEn").checked, ip: $("sIp").value.trim(), gateway: $("sGw").value.trim(), subnet: $("sMask").value.trim(), dns: $("sDns").value.trim() } };
+  $("wifiBtn").disabled = true;
+  try {
+    await api("/api/wifi", body);
+    msg("wifiMsg", "Connecting to " + body.ssid + "... this takes up to 25 seconds.", true);
+    for (let i = 0; i < 40; i++) {
+      await new Promise(r => setTimeout(r, 1500));
+      let r;
+      try { r = await api("/api/wifi/result"); } catch (err) { msg("wifiMsg", "Reconnecting to the terminal... (your phone may briefly drop the hotspot)", true); continue; }
+      if (r.state === "ok") { msg("wifiMsg", "Connected to " + r.ssid + (r.ip ? " with IP " + r.ip : "") + ". Saved. The hotspot closes in a few seconds; the terminal then works normally.", true); break; }
+      if (r.state === "failed") { msg("wifiMsg", "Could not connect: " + r.error + ". Nothing was changed."); break; }
+    }
+  } catch (err) { msg("wifiMsg", err.message); }
+  $("wifiBtn").disabled = false;
+};
+
+// ---- device -------------------------------------------------------------
+$("devForm").onsubmit = async e => {
+  e.preventDefault(); clearMsg("devMsg");
+  try {
+    await api("/api/device", { deviceId: $("dId").value.trim(), tzOffsetSec: +$("dTz").value, relayRfidMs: +$("dRf").value, relayFpMs: +$("dFp").value,
+      phyMode: +$("dPhy").value, txPowerDbm: +$("dTx").value, lanPortal: $("dLan").checked, arduinoOta: $("dOta").checked, autoUpdate: $("dAuto").checked });
+    msg("devMsg", "Saved. Radio changes apply at the next reconnect.", true);
+  } catch (err) { msg("devMsg", err.message); }
+};
+
+// ---- GitHub updates -----------------------------------------------------
+const GH_TEXT = { disabled: "Not available", idle: "Not checked yet", checking: "Checking...", "up-to-date": "Up to date",
+  available: "Update available", installing: "Installing...", failed: "Last attempt failed" };
+async function ghRefresh() {
+  let g;
+  try { g = await api("/api/github-ota"); } catch (e) { return null; }
+  fill("ghInfo", [["Installed", "v" + g.current], ["Latest on GitHub", g.latest ? "v" + g.latest : "-"], ["Status", GH_TEXT[g.state] || g.state],
+    ["Source", g.repo || "Not set"], ["Last check", g.lastCheckAgo >= 0 ? dur(g.lastCheckAgo) + " ago" : "Never"], ["Nightly auto-update", g.autoUpdate ? "On" : "Off"]]);
+  $("ghInstall").classList.toggle("hidden", g.state !== "available");
+  $("ghInstall").textContent = "Install v" + g.latest;
+  $("ghCheck").disabled = g.state === "disabled" || g.state === "checking" || g.state === "installing";
+  if (g.state === "disabled" || g.state === "failed") msg("ghMsg", g.error); else if (g.state !== "checking") clearMsg("ghMsg");
+  return g;
+}
+async function ghWait(done) {
+  for (let i = 0; i < 120; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    let g;
+    try { g = await ghRefresh(); } catch (e) { g = null; }
+    if (!g) { msg("ghMsg", done ? "Terminal is restarting with the new firmware. Reload this page in about 30 seconds." : "Waiting for the terminal...", true); if (done) return; continue; }
+    if (g.state !== "checking" && g.state !== "installing") return g;
+  }
+}
+$("ghCheck").onclick = async () => {
+  try { await api("/api/github-ota/check", {}); msg("ghMsg", "Checking GitHub...", true); await ghWait(false); }
+  catch (e) { msg("ghMsg", e.message); }
+};
+$("ghInstall").onclick = async () => {
+  if (!confirm("Download and install v" + ($("ghInstall").textContent.split("v")[1] || "") + " from GitHub? The terminal is unavailable for about a minute and restarts when done.")) return;
+  try { await api("/api/github-ota/install", {}); msg("ghMsg", "Downloading and installing. Do not power off the terminal.", true); await ghWait(true); }
+  catch (e) { msg("ghMsg", e.message); }
+};
+
+// ---- tools --------------------------------------------------------------
+$("fwBtn").onclick = () => {
+  const f = $("fwFile").files[0]; clearMsg("fwMsg");
+  if (!f) return msg("fwMsg", "Choose a .bin file first.");
+  if (lastStatus.freeSketch && f.size > lastStatus.freeSketch) return msg("fwMsg", "This file (" + kb(f.size) + ") is larger than the free space (" + kb(lastStatus.freeSketch) + ").");
+  if (!confirm("Install " + f.name + " (" + kb(f.size) + ")? The terminal restarts when done.")) return;
+  const fd = new FormData(); fd.append("firmware", f, f.name);
+  const x = new XMLHttpRequest(); x.open("POST", "/api/update"); x.setRequestHeader("Authorization", "Bearer " + token);
+  $("fwProg").classList.remove("hidden"); $("fwBtn").disabled = true;
+  x.upload.onprogress = ev => { if (ev.lengthComputable) $("fwProg").value = Math.round(ev.loaded * 100 / ev.total); };
+  x.onload = () => {
+    $("fwBtn").disabled = false;
+    let r = {}; try { r = JSON.parse(x.responseText); } catch (e) {}
+    if (x.status === 200) msg("fwMsg", "Installed (MD5 " + r.md5 + "). Restarting; reload this page in about 20 seconds.", true);
+    else msg("fwMsg", "Update failed: " + (r.error || "HTTP " + x.status));
+  };
+  x.onerror = () => { $("fwBtn").disabled = false; msg("fwMsg", "Upload interrupted. The old firmware is still running."); };
+  x.send(fd);
+};
+$("pingBtn").onclick = async () => { try { const r = await api("/api/ping", {}); msg("diagMsg", r.ms >= 0 ? "login.cloudhrm.in reachable in " + r.ms + " ms." : "Server not reachable.", r.ms >= 0); } catch (e) { msg("diagMsg", e.message); } };
+$("logBtn").onclick = async () => { try { const t = await api("/api/logs"); const b = $("logBox"); b.textContent = t || "(empty)"; b.classList.remove("hidden"); b.scrollTop = b.scrollHeight; } catch (e) { msg("diagMsg", e.message); } };
+$("logDl").onclick = async () => { try { const t = await api("/api/logs"); const a = el("a", { href: URL.createObjectURL(new Blob([t], { type: "text/plain" })), download: "cloudhrm-log.txt" }); document.body.append(a); a.click(); a.remove(); } catch (e) { msg("diagMsg", e.message); } };
+$("pwForm").onsubmit = async e => {
+  e.preventDefault(); clearMsg("pwMsg");
+  try { await api("/api/password", { current: $("pCur").value, next: $("pNew").value }); $("pCur").value = $("pNew").value = ""; msg("pwMsg", "Password changed. Other sessions were signed out.", true); }
+  catch (err) { msg("pwMsg", err.message); }
+};
+$("apBtn").onclick = async () => { if (!confirm("Generate a new hotspot password? It is shown on the terminal screen in hotspot mode.")) return; try { const r = await api("/api/ap-password", {}); msg("pwMsg", "New hotspot password: " + r.apPassword + ". " + r.note + ".", true); } catch (e) { msg("pwMsg", e.message); } };
+$("logoutBtn").onclick = async () => { try { await api("/api/logout", {}); } catch (e) {} showAuth(); };
+$("rebootBtn").onclick = () => maint("/api/reboot", undefined, "Restart the terminal now?", "Restarting. Reload in about 20 seconds.");
+$("wifiResetBtn").onclick = () => maint("/api/reset-wifi", undefined, "Forget the WiFi network? The terminal restarts in setup mode.", "WiFi cleared. The terminal restarts in setup mode.");
+$("factoryBtn").onclick = () => {
+  const t = prompt("This erases ALL settings including the admin password and device ID.\nType RESET to confirm.");
+  if (t === "RESET") maint("/api/factory-reset", { confirm: "RESET" }, null, "Factory reset done. The terminal restarts in setup mode.");
+};
+async function maint(path, body, question, done) {
+  if (question && !confirm(question)) return;
+  try { await api(path, body === undefined ? {} : body); msg("mntMsg", done, true); clearInterval(statusTimer); } catch (e) { msg("mntMsg", e.message); }
+}
+
+// ---- start --------------------------------------------------------------
+function start() {
+  $("auth").classList.add("hidden"); $("app").classList.remove("hidden");
+  refreshStatus(); clearInterval(statusTimer); statusTimer = setInterval(() => { if (!document.hidden) refreshStatus(); }, 5000);
+}
+(async () => {
+  try { info = await api("/api/info"); } catch (e) { info = {}; }
+  $("hdr").textContent = (info.name || "") + (info.fw ? " · v" + info.fw : "");
+  if (token && info.claimed) start(); else showAuth();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+{
+  // Build and flash with arduino-cli (https://arduino.github.io/arduino-cli/).
+  // Board, core and library versions come from sketch.yaml.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build web page",
+      "type": "shell",
+      "command": "python tools/build_web.py",
+      "problemMatcher": []
+    },
+    {
+      "label": "Build firmware",
+      "type": "shell",
+      "command": "arduino-cli compile --profile nodemcu --output-dir build --warnings default .",
+      "dependsOn": "Build web page",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "Upload (USB)",
+      "type": "shell",
+      "command": "arduino-cli upload --profile nodemcu --input-dir build -p ${input:comPort} .",
+      "dependsOn": "Build firmware",
+      "problemMatcher": []
+    },
+    {
+      "label": "Upload (OTA over WiFi)",
+      "type": "shell",
+      "command": "python \"${env:LOCALAPPDATA}/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/tools/espota.py\" -i ${input:deviceIp} -a ${input:adminPassword} -f build/CloudHRM_v2.ino.bin.signed",
+      "dependsOn": "Build firmware",
+      "problemMatcher": []
+    },
+    {
+      "label": "Serial monitor",
+      "type": "shell",
+      "command": "arduino-cli monitor -p ${input:comPort} -c baudrate=115200",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    { "id": "comPort", "type": "promptString", "description": "Serial port", "default": "COM3" },
+    { "id": "deviceIp", "type": "promptString", "description": "Terminal IP address (Status tab)" },
+    { "id": "adminPassword", "type": "promptString", "description": "Portal admin password", "password": true }
+  ]
+}

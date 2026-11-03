@@ -1,0 +1,7 @@
+# Store text with LF line endings in the repository and the working copy
+# (the GitHub Actions build runs on Linux). Silences the LF/CRLF warnings.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.bin binary
+*.png binary
+*.pdf binary

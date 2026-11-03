@@ -1,0 +1,73 @@
+# Builds, signs and publishes CloudHRM terminal firmware.
+#
+# Trigger: push a tag that matches CHRM_FW_VERSION in src/config.h,
+#   e.g. version "2.0.1" -> git tag v2.0.1 && git push origin v2.0.1
+# Needs the repository secret OTA_PRIVATE_KEY (contents of private.key).
+# Publishes CloudHRM_v2.bin (signed) and manifest.json to the GitHub Release;
+# terminals read .../releases/latest/download/manifest.json.
+
+name: Firmware release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches the firmware version
+        run: |
+          v=$(grep -oP '#define CHRM_FW_VERSION "\K[^"]+' src/config.h)
+          if [ "v$v" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match CHRM_FW_VERSION \"$v\" in src/config.h"
+            exit 1
+          fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+
+      - name: Check signing setup
+        env:
+          OTA_PRIVATE_KEY: ${{ secrets.OTA_PRIVATE_KEY }}
+        run: |
+          test -f public.key || { echo "::error::public.key is not committed"; exit 1; }
+          test -n "$OTA_PRIVATE_KEY" || { echo "::error::Repository secret OTA_PRIVATE_KEY is missing"; exit 1; }
+          printf '%s\n' "$OTA_PRIVATE_KEY" > private.key
+          # The private key must belong to the committed public key.
+          diff <(openssl rsa -in private.key -pubout 2>/dev/null) <(tr -d '\r' < public.key) \
+            || { echo "::error::OTA_PRIVATE_KEY does not match public.key"; exit 1; }
+
+      - name: Pack the web page
+        run: python3 tools/build_web.py
+
+      - uses: arduino/setup-arduino-cli@v2
+
+      - name: Build (sketch.yaml installs the pinned core and libraries)
+        run: arduino-cli compile --profile nodemcu --build-path "$RUNNER_TEMP/build" .
+
+      - name: Package signed firmware and manifest
+        run: |
+          signed="$RUNNER_TEMP/build/CloudHRM_v2.ino.bin.signed"
+          test -f "$signed" || { echo "::error::No signed binary produced"; exit 1; }
+          mkdir -p dist
+          cp "$signed" dist/CloudHRM_v2.bin
+          size=$(stat -c%s dist/CloudHRM_v2.bin)
+          md5=$(md5sum dist/CloudHRM_v2.bin | cut -d' ' -f1)
+          printf '{"version":"%s","tag":"%s","bin":"CloudHRM_v2.bin","size":%s,"md5":"%s"}\n' \
+            "$VERSION" "$GITHUB_REF_NAME" "$size" "$md5" > dist/manifest.json
+          cat dist/manifest.json
+
+      - name: Remove the private key
+        if: always()
+        run: rm -f private.key
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/CloudHRM_v2.bin
+            dist/manifest.json
+          generate_release_notes: true

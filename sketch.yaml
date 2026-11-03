@@ -1,0 +1,19 @@
+# arduino-cli build profile (used by the VS Code tasks):
+#   arduino-cli compile --profile nodemcu
+# Pins the board options, core and library versions this firmware was written for.
+profiles:
+  nodemcu:
+    notes: NodeMCU 1.0 (ESP-12E), 160 MHz, 4MB (FS:1MB OTA:~1019KB), lwIP v2 Higher Bandwidth
+    fqbn: esp8266:esp8266:nodemcuv2:xtal=160,eesz=4M1M,ssl=all,ip=hb2f,baud=921600
+    platforms:
+      - platform: esp8266:esp8266 (3.1.2)
+        platform_index_url: https://arduino.esp8266.com/stable/package_esp8266com_index.json
+    libraries:
+      - ArduinoJson (7.4.3)
+      - Adafruit SSD1306 (2.5.17)
+      - Adafruit GFX Library (1.12.6)
+      - Adafruit BusIO (1.17.4)
+      - Adafruit Fingerprint Sensor Library (2.1.4)
+      - MFRC522 (1.4.12)
+      - PubSubClient (2.8)
+default_profile: nodemcu

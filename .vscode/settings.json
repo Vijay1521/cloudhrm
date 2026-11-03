@@ -1,0 +1,6 @@
+{
+  "files.associations": { "*.ino": "cpp" },
+  "C_Cpp.default.configurationProvider": "",
+  "files.exclude": { "build": true, ".pio": true },
+  "editor.tabSize": 2
+}
