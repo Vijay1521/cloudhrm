@@ -7,7 +7,7 @@
 
 #include <Arduino.h>
 
-#define CHRM_FW_VERSION "2.0.0"
+#define CHRM_FW_VERSION "2.0.1"
 
 // 1 = print logs on Serial at 115200. The fingerprint sensor shares this UART,
 // so the sensor is disabled in such builds. Keep 0 for production.
