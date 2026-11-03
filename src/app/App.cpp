@@ -281,7 +281,7 @@ void App::drawIdle() {
       else if (net_.phase() == NetManager::Phase::SmartConfig)
         ui_.smartConfig(d.deviceId, net_.phaseSecsLeft());
       else
-        ui_.apMode(NetManager::apSsid(), d.apPass, net_.phaseSecsLeft());
+        ui_.apMode(NetManager::apSsid(), net_.phaseSecsLeft());
       break;
 
     case NetManager::State::Online:

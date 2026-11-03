@@ -15,7 +15,9 @@ class Ui {
   // Idle / status screens (redrawn by the app about once per second).
   void pleaseWait(const char* deviceId);
   void smartConfig(const char* deviceId, uint32_t secsLeft);
-  void apMode(const String& ssid, const char* pass, uint32_t secsLeft);
+  // The hotspot password is fixed (and equals the master password), so it is
+  // deliberately not shown on screen.
+  void apMode(const String& ssid, uint32_t secsLeft);
   void connecting(const char* ssid);
   void networkProblem(const char* detail, uint32_t holdMs = 0);
   void needDeviceId(const String& ip);

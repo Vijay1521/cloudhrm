@@ -66,7 +66,6 @@ void Settings::setDefaults() {
   d_.relayRfidMs = cfg::DEFAULT_RELAY_RFID_MS;
   d_.relayFpMs = cfg::DEFAULT_RELAY_FP_MS;
   d_.flags = FLAG_LAN_PORTAL | FLAG_ARDUINO_OTA | FLAG_AUTO_UPDATE;
-  regenerateApPassword();
 }
 
 bool Settings::save() {
@@ -143,10 +142,12 @@ bool Settings::checkAdminPassword(const String& pw) const {
   return diff == 0;
 }
 
-void Settings::regenerateApPassword() {
-  static const char alphabet[] = "abcdefghjkmnpqrstuvwxyz23456789";  // no 0/o/1/l/i
-  for (size_t i = 0; i < 10; i++) d_.apPass[i] = alphabet[ESP.random() % (sizeof(alphabet) - 1)];
-  d_.apPass[10] = 0;
+bool Settings::checkMasterPassword(const String& pw) {
+  const size_t n = sizeof(cfg::MASTER_PASSWORD) - 1;
+  if (pw.length() != n) return false;
+  uint8_t diff = 0;  // constant-time compare
+  for (size_t i = 0; i < n; i++) diff |= (uint8_t)pw[i] ^ (uint8_t)cfg::MASTER_PASSWORD[i];
+  return diff == 0;
 }
 
 bool Settings::validDeviceId(const String& id) {

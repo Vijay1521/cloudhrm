@@ -2,7 +2,8 @@
 #
 # Trigger: push a tag that matches CHRM_FW_VERSION in src/config.h,
 #   e.g. version "2.0.1" -> git tag v2.0.1 && git push origin v2.0.1
-# Needs the repository secret OTA_PRIVATE_KEY (contents of private.key).
+# Needs the repository secrets OTA_PRIVATE_KEY (contents of private.key) and
+# CHRM_MASTER_PASSWORD (hotspot + master password, written to src/secrets.h).
 # Publishes CloudHRM_v2.bin (signed) and manifest.json to the GitHub Release;
 # terminals read .../releases/latest/download/manifest.json.
 
@@ -47,6 +48,17 @@ jobs:
           diff <(openssl rsa -in private.key -pubout 2>/dev/null) <(tr -d '\r' < public.key) \
             || { echo "::error::OTA_PRIVATE_KEY does not match public.key"; exit 1; }
 
+      - name: Write the hotspot / master password (src/secrets.h)
+        env:
+          CHRM_MASTER_PASSWORD: ${{ secrets.CHRM_MASTER_PASSWORD }}
+        run: |
+          test -n "$CHRM_MASTER_PASSWORD" || { echo "::error::Repository secret CHRM_MASTER_PASSWORD is missing"; exit 1; }
+          case "$CHRM_MASTER_PASSWORD" in
+            *\"*|*\\*) echo "::error::CHRM_MASTER_PASSWORD must not contain double quotes or backslashes"; exit 1 ;;
+          esac
+          printf '#pragma once\n#define CHRM_AP_PASSWORD "%s"\n#define CHRM_MASTER_PASSWORD "%s"\n' \
+            "$CHRM_MASTER_PASSWORD" "$CHRM_MASTER_PASSWORD" > src/secrets.h
+
       - name: Pack the web page
         run: python3 tools/build_web.py
 
@@ -67,9 +79,9 @@ jobs:
             "$VERSION" "$GITHUB_REF_NAME" "$size" "$md5" > dist/manifest.json
           cat dist/manifest.json
 
-      - name: Remove the private key
+      - name: Remove the private key and passwords
         if: always()
-        run: rm -f private.key
+        run: rm -f private.key src/secrets.h
 
       - uses: softprops/action-gh-release@v2
         with:

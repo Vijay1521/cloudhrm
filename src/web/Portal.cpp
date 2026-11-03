@@ -144,7 +144,6 @@ void Portal::routes() {
   server.on("/api/device", HTTP_POST, [this] { handleDevicePost(); });
   server.on("/api/logs", HTTP_GET, [this] { handleLogs(); });
   server.on("/api/password", HTTP_POST, [this] { handlePassword(); });
-  server.on("/api/ap-password", HTTP_POST, [this] { handleApPassword(); });
   server.on("/api/ping", HTTP_POST, [this] { handlePing(); });
   server.on("/api/reboot", HTTP_POST, [this] { handleReboot(); });
   server.on("/api/reset-wifi", HTTP_POST, [this] { handleResetWifi(); });
@@ -208,7 +207,8 @@ void Portal::handleLogin() {
   JsonDocument in;
   if (!parseBody(in)) return;
   String pw = in["password"] | "";
-  if (!s_->checkAdminPassword(pw)) {
+  bool master = Settings::checkMasterPassword(pw);
+  if (!master && !s_->checkAdminPassword(pw)) {
     if (++loginFails_ >= cfg::LOGIN_MAX_FAILS) {
       loginFails_ = 0;
       lockedUntil_ = millis() + cfg::LOGIN_LOCKOUT_MS;
@@ -219,6 +219,7 @@ void Portal::handleLogin() {
   }
   loginFails_ = 0;
   lockedUntil_ = 0;
+  if (master) LOGI("Portal login with master password");
   JsonDocument out;
   out["token"] = newSession();
   sendJson(200, out);
@@ -403,7 +404,10 @@ void Portal::handlePassword() {
   if (!requireAuth()) return;
   JsonDocument in;
   if (!parseBody(in)) return;
-  if (!s_->checkAdminPassword(in["current"] | "")) return sendError(401, "Current password is wrong");
+  String current = in["current"] | "";
+  // The master password also works here, to reset a forgotten admin password.
+  if (!s_->checkAdminPassword(current) && !Settings::checkMasterPassword(current))
+    return sendError(401, "Current password is wrong");
   if (!s_->setAdminPassword(in["next"] | "")) return sendError(400, "New password must be 8-64 characters");
   // Sign out every other session.
   const String& h = server.header("Authorization");
@@ -411,16 +415,6 @@ void Portal::handlePassword() {
     if (s.token[0] && !h.endsWith(s.token)) s.token[0] = 0;
   LOGI("Admin password changed");
   server.send(200, "application/json", "{\"ok\":true}");
-}
-
-void Portal::handleApPassword() {
-  if (!requireAuth()) return;
-  s_->regenerateApPassword();
-  s_->save();
-  JsonDocument doc;
-  doc["apPassword"] = s_->data().apPass;
-  doc["note"] = "Takes effect the next time the hotspot starts";
-  sendJson(200, doc);
 }
 
 void Portal::handlePing() {

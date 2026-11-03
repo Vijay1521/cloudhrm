@@ -55,7 +55,6 @@ class Portal {
   void handleDevicePost();
   void handleLogs();
   void handlePassword();
-  void handleApPassword();
   void handlePing();
   void handleReboot();
   void handleResetWifi();

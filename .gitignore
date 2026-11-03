@@ -1,5 +1,7 @@
 # Never commit the OTA signing key (it lives only in the OTA_PRIVATE_KEY secret)
 private.key
+# Hotspot and master passwords (CI writes it from the CHRM_MASTER_PASSWORD secret)
+src/secrets.h
 
 # Build output
 build/

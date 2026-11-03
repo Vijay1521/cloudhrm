@@ -29,7 +29,7 @@ struct SettingsData {
   uint8_t lastGoodPhy;   // PhyMode that last joined successfully (Auto = none yet)
   uint8_t txPowerQdBm;   // quarter dB, 82 = 20.5 dBm
 
-  char apPass[17];       // WPA2 key of the setup hotspot
+  char apPass[17];       // unused since 2.0.2 (hotspot password is fixed in secrets.h); kept for the file layout
   uint8_t adminSet;
   uint8_t adminSalt[16];
   uint8_t adminHash[32];  // SHA-256(salt + password)
@@ -63,7 +63,7 @@ class Settings {
 
   bool setAdminPassword(const String& pw);
   bool checkAdminPassword(const String& pw) const;
-  void regenerateApPassword();
+  static bool checkMasterPassword(const String& pw);
 
   static bool validDeviceId(const String& id);
   static bool validSsid(const String& s) { return s.length() >= 1 && s.length() <= 32; }

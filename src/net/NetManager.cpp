@@ -251,7 +251,7 @@ void NetManager::enterPhase(Phase p) {
     WiFi.stopSmartConfig();
     WiFi.mode(WIFI_AP_STA);
     WiFi.softAPConfig(kApIp, kApIp, kApMask);
-    WiFi.softAP(apSsid(), s_->data().apPass);
+    WiFi.softAP(apSsid(), cfg::AP_PASSWORD);
     apOn_ = true;
     phaseEnd_ = millis() + cfg::AP_WINDOW_MS;
     LOGI("Setup hotspot %s up", apSsid().c_str());

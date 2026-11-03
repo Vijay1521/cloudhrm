@@ -82,6 +82,20 @@ python tools/build_web.py
 After setup, the same page is available on the office network at the terminal's IP
 (admin login required; can be switched off in *Device → Access*).
 
+## Hotspot and master password
+
+`src/secrets.h` (not committed; copy `src/secrets.example.h`) sets two fixed passwords:
+
+- `CHRM_AP_PASSWORD`: WPA2 password of the setup hotspot `CloudHRM-XXXXXX`, the same on every terminal.
+  It is not shown on the OLED.
+- `CHRM_MASTER_PASSWORD`: always accepted at the portal sign-in, and as the *current password*
+  when setting a new admin password (to recover a forgotten one). ArduinoOTA uses it until an
+  admin password is set.
+
+The release workflow writes `src/secrets.h` from the repository secret **`CHRM_MASTER_PASSWORD`**
+(used for both). Anyone who has a firmware `.bin` can extract these values, so treat them as
+"installer" passwords rather than strong secrets.
+
 ## Reset gestures (quick presses of the reset button, or power cycles, < 3 s apart)
 
 | Presses | Action |

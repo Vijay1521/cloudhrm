@@ -84,19 +84,16 @@ void Ui::smartConfig(const char* deviceId, uint32_t secsLeft) {  // v1 EPMODE()
   finish(0);
 }
 
-void Ui::apMode(const String& ssid, const char* pass, uint32_t secsLeft) {  // v1 APMODE()
+void Ui::apMode(const String& ssid, uint32_t secsLeft) {  // v1 APMODE()
   start();
   d_.setTextSize(2);
   d_.setCursor(0, 0);
   d_.println("APMode");
   d_.setTextSize(1);
-  d_.setCursor(0, 22);
+  d_.setCursor(0, 24);
   d_.print("WiFi: ");
   d_.println(ssid);
-  d_.setCursor(0, 33);
-  d_.print("Pass: ");
-  d_.println(pass);
-  d_.setCursor(0, 44);
+  d_.setCursor(0, 38);
   d_.println("Open 192.168.4.1");
   countdown(secsLeft, WHITE);
   finish(0);

@@ -1,7 +1,9 @@
 #include "Ota.h"
 
 #include <ArduinoOTA.h>
+#include <MD5Builder.h>
 
+#include "../config.h"
 #include "../net/NetManager.h"
 #include "../ui/Ui.h"
 #include "Logger.h"
@@ -14,10 +16,18 @@ void Ota::begin(Settings& settings, Ui& ui) {
 
 void Ota::loop() {
   if (!started_) {
-    // Needs an admin password: without one anybody on the LAN could flash.
-    if (!s_->flag(FLAG_ARDUINO_OTA) || !s_->data().adminSet) return;
+    if (!s_->flag(FLAG_ARDUINO_OTA)) return;
     ArduinoOTA.setHostname(NetManager::hostname().c_str());
-    ArduinoOTA.setPasswordHash(s_->data().otaMd5);
+    // Admin password once one is set, otherwise the master password.
+    if (s_->data().adminSet) {
+      ArduinoOTA.setPasswordHash(s_->data().otaMd5);
+    } else {
+      MD5Builder md5;
+      md5.begin();
+      md5.add(cfg::MASTER_PASSWORD);
+      md5.calculate();
+      ArduinoOTA.setPasswordHash(md5.toString().c_str());
+    }
     ArduinoOTA.onStart([this]() {
       LOGI("ArduinoOTA start");
       ui_->progress("Updating", 0);

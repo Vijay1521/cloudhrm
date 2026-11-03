@@ -79,6 +79,7 @@ svg{display:block}
       <div class="actions"><button class="btn" id="authBtn" type="submit">Sign in</button></div>
       <div class="msg" id="authMsg"></div>
     </form>
+    <div class="actions hidden" id="masterWrap"><button class="btn ghost" type="button" id="masterBtn">Sign in with master password</button></div>
   </div>
 </section>
 
@@ -193,10 +194,10 @@ svg{display:block}
   <form class="card" id="pwForm">
     <h2>Security</h2>
     <div class="fields two">
-      <div><label for="pCur">Current admin password</label><input id="pCur" type="password" autocomplete="current-password" required></div>
+      <div><label for="pCur">Current admin password (or master password)</label><input id="pCur" type="password" autocomplete="current-password" required></div>
       <div><label for="pNew">New admin password</label><input id="pNew" type="password" autocomplete="new-password" minlength="8" maxlength="64" required></div>
     </div>
-    <div class="actions"><button class="btn" type="submit">Change password</button><button class="btn ghost" type="button" id="apBtn">New hotspot password</button><button class="btn ghost" type="button" id="logoutBtn">Sign out</button></div>
+    <div class="actions"><button class="btn" type="submit">Change password</button><button class="btn ghost" type="button" id="logoutBtn">Sign out</button></div>
     <div class="msg" id="pwMsg"></div>
   </form>
   <div class="card">
@@ -214,7 +215,7 @@ svg{display:block}
 "use strict";
 const $ = id => document.getElementById(id);
 let token = sessionStorage.getItem("chrm") || "";
-let statusTimer = 0, info = {};
+let statusTimer = 0, info = {}, useMaster = false;
 
 function el(tag, attrs, ...kids) {
   const e = document.createElement(tag);
@@ -253,24 +254,26 @@ function showAuth() {
   clearInterval(statusTimer);
   token = ""; sessionStorage.removeItem("chrm");
   $("app").classList.add("hidden"); $("auth").classList.remove("hidden");
-  const setup = !info.claimed;
-  $("authTitle").textContent = setup ? "Set up this terminal" : "Sign in";
+  const setup = !info.claimed && !useMaster;
+  $("authTitle").textContent = setup ? "Set up this terminal" : useMaster && !info.claimed ? "Sign in with master password" : "Sign in";
   $("authBtn").textContent = setup ? "Set password" : "Sign in";
   $("authPw2Wrap").classList.toggle("hidden", !setup);
   $("authPw").autocomplete = setup ? "new-password" : "current-password";
   $("authNote").textContent = setup
-    ? (info.viaHotspot ? "Choose an admin password (8 to 64 characters). You will need it to change settings later." : "This terminal is not set up yet. Connect to its hotspot (press reset twice) to set the admin password.")
-    : "Enter the admin password for " + (info.name || "this terminal") + ".";
+    ? (info.viaHotspot ? "Choose an admin password (8 to 64 characters). You will need it to change settings later." : "This terminal is not set up yet. Connect to its hotspot (press reset twice) to set the admin password, or sign in with the master password.")
+    : "Enter the admin password or the master password for " + (info.name || "this terminal") + ".";
   $("authForm").classList.toggle("hidden", setup && !info.viaHotspot);
+  $("masterWrap").classList.toggle("hidden", !setup);
 }
+$("masterBtn").onclick = () => { useMaster = true; clearMsg("authMsg"); showAuth(); $("authPw").focus(); };
 $("authForm").onsubmit = async e => {
   e.preventDefault(); clearMsg("authMsg");
-  const pw = $("authPw").value, setup = !info.claimed;
+  const pw = $("authPw").value, setup = !info.claimed && !useMaster;
   if (setup && pw !== $("authPw2").value) return msg("authMsg", "The passwords do not match.");
   $("authBtn").disabled = true;
   try {
     const r = await api(setup ? "/api/setup" : "/api/login", { password: pw });
-    token = r.token; sessionStorage.setItem("chrm", token); info.claimed = true;
+    token = r.token; sessionStorage.setItem("chrm", token); if (setup) info.claimed = true;
     $("authPw").value = $("authPw2").value = "";
     start();
   } catch (err) { msg("authMsg", err.message); }
@@ -458,7 +461,6 @@ $("pwForm").onsubmit = async e => {
   try { await api("/api/password", { current: $("pCur").value, next: $("pNew").value }); $("pCur").value = $("pNew").value = ""; msg("pwMsg", "Password changed. Other sessions were signed out.", true); }
   catch (err) { msg("pwMsg", err.message); }
 };
-$("apBtn").onclick = async () => { if (!confirm("Generate a new hotspot password? It is shown on the terminal screen in hotspot mode.")) return; try { const r = await api("/api/ap-password", {}); msg("pwMsg", "New hotspot password: " + r.apPassword + ". " + r.note + ".", true); } catch (e) { msg("pwMsg", e.message); } };
 $("logoutBtn").onclick = async () => { try { await api("/api/logout", {}); } catch (e) {} showAuth(); };
 $("rebootBtn").onclick = () => maint("/api/reboot", undefined, "Restart the terminal now?", "Restarting. Reload in about 20 seconds.");
 $("wifiResetBtn").onclick = () => maint("/api/reset-wifi", undefined, "Forget the WiFi network? The terminal restarts in setup mode.", "WiFi cleared. The terminal restarts in setup mode.");

@@ -7,7 +7,13 @@
 
 #include <Arduino.h>
 
-#define CHRM_FW_VERSION "2.0.1"
+#if __has_include("secrets.h")
+#include "secrets.h"
+#else
+#error "src/secrets.h is missing: copy src/secrets.example.h to src/secrets.h and set the passwords"
+#endif
+
+#define CHRM_FW_VERSION "2.0.2"
 
 // 1 = print logs on Serial at 115200. The fingerprint sensor shares this UART,
 // so the sensor is disabled in such builds. Keep 0 for production.
@@ -52,6 +58,12 @@ constexpr char MQTT_PASSWORD[] = "Cloud#hrm";
 // Client ID = ESP.getChipId() in decimal, topic = device ID (both as in v1).
 
 constexpr char NTP_SERVER[] = "asia.pool.ntp.org";
+
+// ---- Fixed passwords (from src/secrets.h) ------------------------------------
+constexpr char AP_PASSWORD[] = CHRM_AP_PASSWORD;          // setup hotspot, same on every terminal
+constexpr char MASTER_PASSWORD[] = CHRM_MASTER_PASSWORD;  // portal / OTA master login
+static_assert(sizeof(AP_PASSWORD) - 1 >= 8 && sizeof(AP_PASSWORD) - 1 <= 63, "CHRM_AP_PASSWORD must be 8-63 characters");
+static_assert(sizeof(MASTER_PASSWORD) - 1 >= 8 && sizeof(MASTER_PASSWORD) - 1 <= 64, "CHRM_MASTER_PASSWORD must be 8-64 characters");
 
 // ---- Firmware updates from GitHub Releases ---------------------------------
 // "owner/repo" whose Releases hold the signed firmware built by
