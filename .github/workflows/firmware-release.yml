@@ -18,8 +18,14 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        # Arduino needs the sketch folder to be named like the .ino file.
+        working-directory: CloudHRM_v2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          path: CloudHRM_v2
 
       - name: Check the tag matches the firmware version
         run: |
@@ -68,6 +74,6 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/CloudHRM_v2.bin
-            dist/manifest.json
+            CloudHRM_v2/dist/CloudHRM_v2.bin
+            CloudHRM_v2/dist/manifest.json
           generate_release_notes: true
